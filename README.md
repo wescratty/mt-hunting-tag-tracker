@@ -1,4 +1,4 @@
-# MT Hunting Tag Tracker
+# 2026 MT Hunting Tag Tracker
 
 A personal field-reference tool for southwest Montana deer & elk hunting districts — pick a district, pick a tag/opportunity, and see whether it's open right now, based on the tags and licenses you say you hold. Built to answer "wait, can I shoot a cow elk here today?" from a phone in the field, with no cell service required once it's loaded.
 
