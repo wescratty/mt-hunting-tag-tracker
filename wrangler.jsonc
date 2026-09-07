@@ -1,0 +1,13 @@
+// Cloudflare Workers config for this standalone static site. The whole
+// repo root is served as static assets (index.html, assets/, etc.) --
+// there's no Worker script, just a directory of files. Deploy with
+// `npx wrangler deploy`. First deploy gets a free
+// mt-hunting-tag-tracker.<account>.workers.dev subdomain automatically,
+// no domain purchase needed to start.
+{
+  "name": "mt-hunting-tag-tracker",
+  "compatibility_date": "2026-09-07",
+  "assets": {
+    "directory": "."
+  }
+}

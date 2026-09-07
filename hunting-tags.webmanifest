@@ -1,0 +1,14 @@
+{
+  "name": "MT Hunting Tag Tracker",
+  "short_name": "Hunting Tags",
+  "description": "Southwest Montana deer & elk hunting district tag tracker - works with no signal once installed.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e0e0db",
+  "theme_color": "#253551",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
