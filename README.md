@@ -6,6 +6,10 @@ Live at: `https://mt-hunting-tag-tracker.wescratty.workers.dev/` (Cloudflare Wor
 
 This project started as one page inside a larger site and was ported out into its own standalone repo/deploy so it could stand on its own — see the Log at the bottom of this file for that history.
 
+## Development process
+
+This app was built through **AI pair programming**: Claude Code (Anthropic's agentic coding CLI) acted as the implementation partner, writing the HTML/CSS/JS for every feature and fix in `index.html`, while I directed the work as architect and reviewer. My side of that included writing the requirements and feature specs, making the architecture calls — e.g. the `/index.html` vs `/` service-worker alias fix under "Offline support" below, and the decision to port this out of a larger site into its own standalone repo (see the Log) — reviewing every diff, testing each change live in-browser (desktop and mobile) before accepting it, and handling deployment myself. I also did ordinary code review on the AI's output the same way I would on any teammate's: for example, the "filling in one district removes the tag from the others it's valid in" logic documented above was corrected through that review after an early version got it wrong, not written correctly on the first pass.
+
 ## Files
 
 | File | Purpose |
