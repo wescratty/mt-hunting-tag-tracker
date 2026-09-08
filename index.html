@@ -387,6 +387,33 @@ section{ padding:60px 0; }
 }
 .ht-map-caption{ font-size:0.8rem; color:var(--text-muted); margin:10px 2px 2px; }
 
+/* Quick View tag popup - Quick View hides the district/tag pickers
+   and detail panel, so a Field Card tap has nowhere to jump to.
+   This stands in with just the essentials, then dismisses itself. */
+.ht-qv-popup{
+  position:fixed;
+  inset:0;
+  background:rgba(26,39,64,0.55);
+  z-index:2200;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.ht-qv-popup-inner{
+  background:#fff;
+  border-radius:12px;
+  max-width:300px;
+  width:100%;
+  padding:22px;
+  text-align:center;
+  box-shadow:0 10px 40px rgba(0,0,0,0.35);
+}
+.ht-qv-popup-inner img{ width:96px; height:96px; object-fit:contain; margin:0 auto 12px; display:block; }
+.ht-qv-popup-code{ font-weight:700; color:var(--navy); font-size:0.82rem; text-transform:uppercase; letter-spacing:0.04em; }
+.ht-qv-popup-inner h3{ margin:6px 0 0; color:var(--navy); font-size:1.2rem; }
+.ht-qv-popup-hint{ margin:14px 0 0; font-size:0.78rem; color:var(--text-muted); }
+
 .ht-quickview-toggle{
   display:flex;
   justify-content:flex-end;
@@ -626,7 +653,7 @@ section{ padding:60px 0; }
 @media print{
   .mt-header, .page-intro, .ht-setup-toggle, #disclaimerSection, #profileSection,
   .ht-select-row, .ht-map-btn, .ht-map-modal, #districtNotes, #detailPanel, .ht-fieldcard-btn,
-  .ht-distfilter, .mt-footer, .ht-gate, .ht-quickview-toggle, .ht-locate-btn, .ht-locate-caveat, #locateResult,
+  .ht-distfilter, .mt-footer, .ht-gate, .ht-quickview-toggle, .ht-locate-btn, .ht-locate-caveat, #locateResult, .ht-qv-popup,
   section > .container > p{
     display:none !important;
   }
@@ -673,6 +700,9 @@ section{ padding:60px 0; }
     <img src="assets/hunting/district-map-region2-3.png" alt="Map of southwest Montana hunting districts, Region 2 and 3">
     <p class="ht-map-caption">Reference only, for finding a district on the ground &mdash; boundaries can change. Always confirm against the current official regulations.</p>
   </div>
+</div>
+<div class="ht-qv-popup ht-hidden" id="qvPopup" onclick="hideQvPopup()">
+  <div class="ht-qv-popup-inner" id="qvPopupInner"></div>
 </div>
 <header class="mt-header">
   <div class="container">
@@ -1591,11 +1621,39 @@ function dismissDetail(){
    scrolls to its full detail - badge size has no room for season
    text or restrictions, so this is how you get the rest of it. */
 function jumpToTag(distId, tagId){
+  // Quick View hides the district/tag pickers and detail panel, so
+  // there's nowhere for the normal flow below to jump to - show a
+  // self-dismissing popup with just the essentials instead.
+  if(document.body.classList.contains("ht-quickview")){
+    showQvPopup(distId, tagId);
+    return;
+  }
   distSelect.value = distId;
   onDistrictChange();
   tagSelect.value = tagId;
   onTagChange(true);
   detailPanel.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+let qvPopupTimer = null;
+const QV_POPUP_MS = 5000;
+function showQvPopup(distId, tagId){
+  const tag = findTag(distId, tagId);
+  if(!tag) return;
+  clearTimeout(qvPopupTimer);
+  document.getElementById("qvPopupInner").innerHTML = `
+    ${tagIconImg(tag)}
+    <div class="ht-qv-popup-code">${tagIdentityLabel(tag)}</div>
+    <h3>${tag.label}</h3>
+    <p class="ht-qv-popup-hint">Tap anywhere to close</p>
+  `;
+  document.getElementById("qvPopup").classList.remove("ht-hidden");
+  qvPopupTimer = setTimeout(hideQvPopup, QV_POPUP_MS);
+}
+function hideQvPopup(){
+  clearTimeout(qvPopupTimer);
+  qvPopupTimer = null;
+  document.getElementById("qvPopup").classList.add("ht-hidden");
 }
 
 function findTag(distId, tagId){
