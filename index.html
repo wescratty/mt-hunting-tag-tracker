@@ -387,6 +387,80 @@ section{ padding:60px 0; }
 }
 .ht-map-caption{ font-size:0.8rem; color:var(--text-muted); margin:10px 2px 2px; }
 
+.ht-quickview-toggle{
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:10px;
+}
+.ht-qv-btn{
+  padding:8px 16px;
+  border-radius:4px;
+  border:1px solid var(--navy);
+  background:#fff;
+  color:var(--navy);
+  font-weight:700;
+  font-size:0.85rem;
+  cursor:pointer;
+}
+.ht-qv-btn:hover{ background:var(--cream-dark); }
+.ht-quickview .mt-header, .ht-quickview .page-intro, .ht-quickview .ht-setup-toggle,
+.ht-quickview #disclaimerSection, .ht-quickview #profileSection, .ht-quickview .ht-select-row,
+.ht-quickview .ht-district-request, .ht-quickview .ht-map-btn, .ht-quickview #districtNotes,
+.ht-quickview #detailPanel, .ht-quickview .mt-footer{
+  display:none !important;
+}
+.ht-quickview section{ padding-top:20px; }
+.ht-quickview .calc-wrap{ padding:16px; }
+
+.ht-locate-btn{
+  display:inline-block;
+  padding:10px 18px;
+  border-radius:4px;
+  border:none;
+  background:var(--navy);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+.ht-locate-btn:hover{ background:var(--navy-light); }
+.ht-locate-btn:disabled{ background:var(--text-muted); cursor:wait; }
+.ht-locate-result{
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:6px;
+  font-size:0.9rem;
+  background:var(--cream-dark);
+  border-left:4px solid var(--text-muted);
+}
+.ht-locate-result.is-good{ background:#eaf3ea; border-left-color:#2e7d32; color:#245c27; }
+.ht-locate-result.is-warn{ background:#fff6e5; border-left-color:var(--gold); color:#5a4321; }
+.ht-locate-result.is-error{ background:#fbeaea; border-left-color:#b3392c; color:#7a271e; }
+.ht-locate-request-btn{
+  display:block;
+  margin-top:10px;
+  padding:8px 14px;
+  border-radius:4px;
+  border:none;
+  background:var(--gold);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+.ht-locate-request-btn:hover{ background:var(--gold-dark); }
+
+.ht-fc-district.ht-fc-current{
+  box-shadow:0 0 0 3px #2e7d32;
+  border-radius:8px;
+  padding:10px;
+  background:#f4f9f4;
+}
+.ht-df-current{
+  background:#eaf3ea;
+  border-left:3px solid #2e7d32;
+  margin-left:-3px;
+  padding-left:8px !important;
+}
+
 .ht-setup-toggle{
   display:flex;
   flex-wrap:wrap;
@@ -551,7 +625,7 @@ section{ padding:60px 0; }
 @media print{
   .mt-header, .page-intro, .ht-setup-toggle, #disclaimerSection, #profileSection,
   .ht-select-row, .ht-map-btn, .ht-map-modal, #districtNotes, #detailPanel, .ht-fieldcard-btn,
-  .ht-distfilter, .mt-footer, .ht-gate,
+  .ht-distfilter, .mt-footer, .ht-gate, .ht-quickview-toggle, .ht-locate-btn, #locateResult,
   section > .container > p{
     display:none !important;
   }
@@ -614,6 +688,10 @@ section{ padding:60px 0; }
 <section>
   <div class="container">
     <div class="calc-wrap ht-app">
+
+      <div class="ht-quickview-toggle">
+        <button type="button" class="ht-qv-btn" id="qvToggleBtn" onclick="onQuickViewToggle()">&#128203; Quick View</button>
+      </div>
 
       <div class="ht-setup-toggle">
         <label for="hideDisclaimerCheck">
@@ -735,7 +813,9 @@ section{ padding:60px 0; }
             <button type="button" class="ht-distfilter-btn" id="distFilterBtn" onclick="toggleDistFilterPanel()">Districts shown &#9662;</button>
             <div class="ht-distfilter-panel ht-hidden" id="distFilterPanel"></div>
           </div>
+          <button type="button" class="ht-locate-btn" id="locateBtn" onclick="onLocateClick()">&#128205; Where Am I</button>
         </div>
+        <div id="locateResult" class="ht-locate-result ht-hidden"></div>
         <div id="fieldCardView" style="margin-top:20px;"></div>
       </div>
 
@@ -749,6 +829,7 @@ section{ padding:60px 0; }
   </div>
 </footer>
 
+<script src="assets/js/turf.min.js"></script>
 <script>
 /* ---------------------------------------------------------------
    SEASON PHASE CONSTANTS (2026 season, from the 2026 MT Deer/Elk/
@@ -1033,6 +1114,7 @@ const DISTFILTER_KEY = "mt-hunt-distfilter-v1";
 const DISCLAIMER_KEY = "mt-hunt-disclaimer-accepted-v1";
 const HIDEDISCLAIMER_KEY = "mt-hunt-hidedisclaimer-v1";
 const HIDEPROFILE_KEY = "mt-hunt-hideprofile-v1";
+const QUICKVIEW_KEY = "mt-hunt-quickview-v1";
 
 /* Precaches the app shell on first (online) visit so the page - and
    everything it needs to run - keeps working with zero signal after
@@ -1071,6 +1153,8 @@ let tagState = loadJSON(TAG_KEY, {});
 let filledState = loadJSON(FILLED_KEY, {});
 let profile = loadJSON(PROFILE_KEY, {age:null, pthfv:false, hasDeerLicense:false, hasElkLicense:false, hasBowLicense:false});
 let distFilter = loadJSON(DISTFILTER_KEY, []); // [] = nothing shown until the hunter picks districts
+let currentDistrict = null; // last "where am I" locate match, in-memory only (not persisted)
+let districtBoundaries = null; // lazy-loaded + cached statewide GeoJSON for locate lookups
 
 function saveTagState(){ saveJSON(TAG_KEY, tagState); }
 function saveFilledState(){ saveJSON(FILLED_KEY, filledState); }
@@ -1334,6 +1418,24 @@ function onHideProfileChange(){
 function onProfileDoneClick(){
   document.getElementById("hideProfileCheck").checked = true;
   onHideProfileChange();
+}
+
+/* Quick View - for once setup is done and you're actually out
+   hunting: strips the branding/setup chrome down to just the Field
+   Card and its controls, so a phone screen shows nothing but "what
+   can I hunt right now." Remembered per browser/device like the
+   other toggles. */
+(function initQuickView(){
+  let on = false;
+  try{ on = localStorage.getItem(QUICKVIEW_KEY) === "1"; }catch(e){}
+  document.body.classList.toggle("ht-quickview", on);
+  document.getElementById("qvToggleBtn").textContent = on ? "✖ Exit Quick View" : "📋 Quick View";
+})();
+function onQuickViewToggle(){
+  const on = !document.body.classList.contains("ht-quickview");
+  document.body.classList.toggle("ht-quickview", on);
+  document.getElementById("qvToggleBtn").textContent = on ? "✖ Exit Quick View" : "📋 Quick View";
+  try{ localStorage.setItem(QUICKVIEW_KEY, on ? "1" : "0"); }catch(e){}
 }
 
 document.getElementById("pAge").value = profile.age != null ? profile.age : "";
@@ -1650,9 +1752,9 @@ function isDistrictShown(distId){
 function renderDistFilterPanel(){
   const panel = document.getElementById("distFilterPanel");
   panel.innerHTML = DISTRICT_ORDER.map(id => `
-    <label>
+    <label class="${id === currentDistrict ? "ht-df-current" : ""}">
       <input type="checkbox" data-dist="${id}" ${distFilter.includes(id) ? "checked" : ""} onchange="onDistFilterCheck('${id}', this.checked)">
-      HD ${id} — ${DISTRICTS[id].name}
+      HD ${id} — ${DISTRICTS[id].name}${id === currentDistrict ? " &#128205;" : ""}
     </label>`).join("") + `
     <div class="ht-df-actions">
       <a onclick="setAllDistFilter(true)">All</a>
@@ -1692,6 +1794,89 @@ document.addEventListener("click", (e) => {
 });
 renderDistFilterPanel();
 renderFieldCard();
+
+/* ---------------------------------------------------------------
+   LOCATE ME - "where am I" lookup against a bundled, simplified
+   statewide FWP hunting-district boundary file (assets/hunting/
+   mt-hunting-districts.geojson, ~139 districts, generated from
+   FWP's own ArcGIS "Deer Elk Lion Hunting Districts" layer). Runs
+   entirely client-side - the coordinates never leave the browser.
+   Doesn't touch distFilter or which districts the Field Card shows;
+   it only marks the matching district, wherever it's already
+   displayed (district filter panel, Field Card), with a green
+   "you are here" highlight.
+----------------------------------------------------------------*/
+async function loadDistrictBoundaries(){
+  if(districtBoundaries) return districtBoundaries;
+  const resp = await fetch("assets/hunting/mt-hunting-districts.geojson");
+  districtBoundaries = await resp.json();
+  return districtBoundaries;
+}
+
+function requestUnsupportedDistrict(distId){
+  const title = encodeURIComponent(`Add hunting district: ${distId}`);
+  const body = encodeURIComponent(`I'd like to request that this hunting district be added to the tracker:\n\nDistrict: ${distId}`);
+  window.open(`https://github.com/wescratty/mt-hunting-tag-tracker/issues/new?title=${title}&body=${body}`, "_blank", "noopener");
+}
+
+function showLocateResult(kind, html){
+  const el = document.getElementById("locateResult");
+  if(!html){ el.classList.add("ht-hidden"); el.innerHTML = ""; return; }
+  el.className = "ht-locate-result" + (kind ? ` is-${kind}` : "");
+  el.innerHTML = html;
+}
+
+function onLocateClick(){
+  const btn = document.getElementById("locateBtn");
+  if(!navigator.geolocation){
+    showLocateResult("error", "Your browser doesn't support location lookup.");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Locating…";
+  showLocateResult("", "");
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try{
+      const { latitude, longitude, accuracy } = pos.coords;
+      const districts = await loadDistrictBoundaries();
+      const pt = turf.point([longitude, latitude]);
+      const match = districts.features.find(f => turf.booleanPointInPolygon(pt, f));
+      const accText = accuracy ? ` (accurate to about ${Math.round(accuracy)}m)` : "";
+
+      if(!match){
+        currentDistrict = null;
+        showLocateResult("error", "Couldn't match your location to a hunting district. Try again, or verify with a map.");
+      }else{
+        const distId = String(match.properties.district);
+        if(DISTRICT_ORDER.includes(distId)){
+          currentDistrict = distId;
+          showLocateResult("good", `📍 You're in HD ${distId} — ${DISTRICTS[distId].name}${accText}. Marked below.`);
+        }else{
+          currentDistrict = null;
+          showLocateResult("warn",
+            `📍 You're in HD ${distId}, which isn't in this tracker yet${accText}.` +
+            `<button type="button" class="ht-locate-request-btn" onclick="requestUnsupportedDistrict('${distId}')">Request HD ${distId} be added</button>`);
+        }
+      }
+      document.getElementById("distFilterPanel").classList.remove("ht-hidden");
+      renderDistFilterPanel();
+      renderFieldCard();
+    }catch(e){
+      showLocateResult("error", "Something went wrong loading district boundaries. Try again.");
+    }finally{
+      btn.disabled = false;
+      btn.textContent = "📍 Where Am I";
+    }
+  }, (err) => {
+    btn.disabled = false;
+    btn.textContent = "📍 Where Am I";
+    currentDistrict = null;
+    showLocateResult("error", err.code === err.PERMISSION_DENIED
+      ? "Location permission denied — allow it in your browser's site settings to use this."
+      : "Couldn't get your location. Try again with a clear view of the sky.");
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
 
 /* ---------------------------------------------------------------
    FIELD CARD - tags you currently hold (license or confirmed tag)
@@ -1748,7 +1933,7 @@ function renderFieldCard(){
       return true;
     });
 
-    html += `<div class="ht-fc-district"><h4>HD ${distId} — ${d.name}</h4><div class="ht-fc-grid">`;
+    html += `<div class="ht-fc-district${distId === currentDistrict ? " ht-fc-current" : ""}"><h4>HD ${distId} — ${d.name}${distId === currentDistrict ? " &#128205; you are here" : ""}</h4><div class="ht-fc-grid">`;
     huntableNow.forEach(t => {
       const caveats = tagCaveats(t);
       const isFilled = tagNeedsManualConfirm(t) ? hasFilledTag(distId, t.id) : (hasFilledTag(distId, t.id) || iconFilledMap[t.icon]);

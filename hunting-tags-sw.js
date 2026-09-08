@@ -25,7 +25,7 @@
   looked up in the cache OR re-fetched from the network - so the
   handler's own fetch() call never actually hits the redirect.
 */
-const CACHE_NAME = "mt-hunting-tag-tracker-v1";
+const CACHE_NAME = "mt-hunting-tag-tracker-v2";
 
 const HTML_ALIAS = "/index.html";
 const HTML_CANONICAL = "/";
@@ -41,6 +41,8 @@ const PRECACHE_PATHS = [
   "/assets/icons/icon-512.png",
   "/assets/icons/favicon-32.png",
   "/assets/hunting/district-map-region2-3.png",
+  "/assets/hunting/mt-hunting-districts.geojson",
+  "/assets/js/turf.min.js",
   "/assets/hunting/icons/wtdBuck.png",
   "/assets/hunting/icons/wtdEither.png",
   "/assets/hunting/icons/wtdDoe.png",
