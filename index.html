@@ -2016,6 +2016,12 @@ function onLocateClick(){
       renderDistFilterPanel();
       renderFieldCard();
       scheduleLocateFade();
+      // Scroll to the highlighted district so a match further down
+      // the list isn't missed - if it has nothing huntable right now
+      // it won't be in the Field Card at all, so fall back to the
+      // result banner (still says which district, just not "good").
+      const highlighted = document.querySelector(".ht-fc-current");
+      (highlighted || document.getElementById("locateResult")).scrollIntoView({behavior:"smooth", block:"center"});
     }catch(e){
       showLocateResult("error", "Something went wrong loading district boundaries. Try again.");
       scheduleLocateFade();
