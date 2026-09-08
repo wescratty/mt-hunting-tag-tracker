@@ -475,17 +475,23 @@ section{ padding:60px 0; }
 }
 .ht-locate-request-btn:hover{ background:var(--gold-dark); }
 
+/* Same padding/border-width in both states, always - only the color
+   changes when a district is highlighted, so drawing/clearing the
+   highlight never grows or shrinks the box and shifts the cards
+   around it. */
+.ht-fc-district{
+  padding:10px;
+  border-radius:8px;
+  box-shadow:0 0 0 3px transparent;
+  background:transparent;
+}
 .ht-fc-district.ht-fc-current{
   box-shadow:0 0 0 3px #2e7d32;
-  border-radius:8px;
-  padding:10px;
   background:#f4f9f4;
 }
-.ht-df-current{
+.ht-distfilter-panel label.ht-df-current{
   background:#eaf3ea;
-  border-left:3px solid #2e7d32;
-  margin-left:-3px;
-  padding-left:8px !important;
+  border-left-color:#2e7d32;
 }
 .ht-locate-pin{ color:#2e7d32; font-weight:700; }
 
@@ -627,7 +633,9 @@ section{ padding:60px 0; }
   display:flex;
   align-items:center;
   gap:8px;
-  padding:5px 0;
+  padding:5px 0 5px 8px;
+  margin-left:-3px;
+  border-left:3px solid transparent;
   font-size:0.9rem;
   white-space:nowrap;
 }
@@ -2005,7 +2013,6 @@ function onLocateClick(){
             `<button type="button" class="ht-locate-request-btn" onclick="requestUnsupportedDistrict('${distId}')">Request HD ${distId} be added</button>`);
         }
       }
-      document.getElementById("distFilterPanel").classList.remove("ht-hidden");
       renderDistFilterPanel();
       renderFieldCard();
       scheduleLocateFade();
