@@ -646,8 +646,10 @@ section{ padding:60px 0; }
       windows and rules are simplified for quick reference. Always confirm exact dates, quotas, and
       restrictions in the current official regulations or at
       <a href="https://fwp.mt.gov/hunt/regulations" target="_blank" rel="noopener">fwp.mt.gov</a> before you hunt.
-      Data verified against the 2026 regulations as of September 2026 &mdash; not affiliated with or
-      endorsed by Montana Fish, Wildlife &amp; Parks.
+      The "Where Am I" locate feature is a rough GPS estimate against simplified boundaries, not a
+      survey &mdash; you are solely responsible for verifying your actual location and district before
+      you hunt. Data verified against the 2026 regulations as of September 2026 &mdash; not affiliated
+      with or endorsed by Montana Fish, Wildlife &amp; Parks.
     </div>
     <div class="ht-privacy-note">
       🔒 Nothing you enter here is sent anywhere &mdash; it's saved only in this browser, on this device.
@@ -702,6 +704,10 @@ section{ padding:60px 0; }
           <input type="checkbox" id="hideProfileCheck" onchange="onHideProfileChange()">
           Hide profile
         </label>
+        <label for="hideLocateCaveatCheck">
+          <input type="checkbox" id="hideLocateCaveatCheck" onchange="onHideLocateCaveatChange()">
+          Hide GPS notice
+        </label>
       </div>
 
       <div id="disclaimerSection">
@@ -713,9 +719,11 @@ section{ padding:60px 0; }
         windows and rules are simplified for quick reference. Always confirm exact dates, quotas, and
         restrictions in the current official regulations or at
         <a href="https://fwp.mt.gov/hunt/regulations" target="_blank" rel="noopener">fwp.mt.gov</a> before you hunt.
-        This app does not determine legality &mdash; it only tracks what you tell it. Data verified against
-        the 2026 regulations as of September 2026 &mdash; not affiliated with or endorsed by Montana Fish,
-        Wildlife &amp; Parks.
+        This app does not determine legality &mdash; it only tracks what you tell it. The "Where Am I"
+        locate feature is a rough GPS estimate against simplified boundaries, not a survey &mdash; you
+        are solely responsible for verifying your actual location and district before you hunt. Data
+        verified against the 2026 regulations as of September 2026 &mdash; not affiliated with or
+        endorsed by Montana Fish, Wildlife &amp; Parks.
       </div>
 
       <div class="ht-privacy-note">
@@ -815,7 +823,9 @@ section{ padding:60px 0; }
           </div>
           <button type="button" class="ht-locate-btn" id="locateBtn" onclick="onLocateClick()">&#128205; Where Am I</button>
         </div>
-        <p class="ht-caveat-note ht-locate-caveat">&#9888;&#65039; GPS and district boundaries here are approximate, not surveyed &mdash; don't trust it blindly. This is a best guess, not a legal determination of what district you're in. You are solely responsible for verifying your actual location before you hunt.</p>
+        <div id="locateCaveatSection">
+          <p class="ht-caveat-note ht-locate-caveat">&#9888;&#65039; GPS is a rough guess, not a survey &mdash; you are solely responsible for verifying your actual location and district before you hunt. (Full note in the disclaimer above; hide this copy with "Hide GPS notice.")</p>
+        </div>
         <div id="locateResult" class="ht-locate-result ht-hidden"></div>
         <div id="fieldCardView" style="margin-top:20px;"></div>
       </div>
@@ -1115,6 +1125,7 @@ const DISTFILTER_KEY = "mt-hunt-distfilter-v1";
 const DISCLAIMER_KEY = "mt-hunt-disclaimer-accepted-v1";
 const HIDEDISCLAIMER_KEY = "mt-hunt-hidedisclaimer-v1";
 const HIDEPROFILE_KEY = "mt-hunt-hideprofile-v1";
+const HIDELOCATECAVEAT_KEY = "mt-hunt-hidelocatecaveat-v1";
 const QUICKVIEW_KEY = "mt-hunt-quickview-v1";
 
 /* Precaches the app shell on first (online) visit so the page - and
@@ -1156,6 +1167,7 @@ let profile = loadJSON(PROFILE_KEY, {age:null, pthfv:false, hasDeerLicense:false
 let distFilter = loadJSON(DISTFILTER_KEY, []); // [] = nothing shown until the hunter picks districts
 let currentDistrict = null; // last "where am I" locate match, in-memory only (not persisted)
 let districtBoundaries = null; // lazy-loaded + cached statewide GeoJSON for locate lookups
+let locateFadeTimer = null; // pending "fade the stale locate result away" timer
 
 function saveTagState(){ saveJSON(TAG_KEY, tagState); }
 function saveFilledState(){ saveJSON(FILLED_KEY, filledState); }
@@ -1401,6 +1413,7 @@ let gateAlreadyAccepted = false;
 try{ gateAlreadyAccepted = localStorage.getItem(DISCLAIMER_KEY) === "1"; }catch(e){}
 initHideToggle("hideDisclaimerCheck", "disclaimerSection", HIDEDISCLAIMER_KEY, gateAlreadyAccepted);
 initHideToggle("hideProfileCheck", "profileSection", HIDEPROFILE_KEY, false);
+initHideToggle("hideLocateCaveatCheck", "locateCaveatSection", HIDELOCATECAVEAT_KEY, false);
 
 function onHideDisclaimerChange(){
   const hidden = document.getElementById("hideDisclaimerCheck").checked;
@@ -1411,6 +1424,11 @@ function onHideProfileChange(){
   const hidden = document.getElementById("hideProfileCheck").checked;
   document.getElementById("profileSection").classList.toggle("ht-hidden", hidden);
   try{ localStorage.setItem(HIDEPROFILE_KEY, hidden ? "1" : "0"); }catch(e){}
+}
+function onHideLocateCaveatChange(){
+  const hidden = document.getElementById("hideLocateCaveatCheck").checked;
+  document.getElementById("locateCaveatSection").classList.toggle("ht-hidden", hidden);
+  try{ localStorage.setItem(HIDELOCATECAVEAT_KEY, hidden ? "1" : "0"); }catch(e){}
 }
 /* The "Done" button at the bottom of the profile form is just a more
    natural way to reach the same hide-profile toggle, for a hunter who
@@ -1820,7 +1838,44 @@ function requestUnsupportedDistrict(distId){
   window.open(`https://github.com/wescratty/mt-hunting-tag-tracker/issues/new?title=${title}&body=${body}`, "_blank", "noopener");
 }
 
+/* A locate result goes stale the moment the hunter walks away from
+   where they stood when they tapped the button - so it doesn't just
+   sit there indefinitely. LOCATE_FADE_MS after a result appears (and
+   after any highlight has been drawn), it slowly fades to nothing and
+   is fully cleared, rather than lingering and potentially reading as
+   current if glanced at later. */
+const LOCATE_FADE_MS = 30000;
+
+function clearLocateFade(){
+  if(locateFadeTimer){ clearTimeout(locateFadeTimer); locateFadeTimer = null; }
+  const targets = [document.getElementById("locateResult"), ...document.querySelectorAll(".ht-fc-current, .ht-df-current")];
+  targets.forEach(el => { el.style.transition = ""; el.style.opacity = ""; });
+}
+
+function scheduleLocateFade(){
+  clearLocateFade();
+  // Double rAF so the browser paints the fully-visible state first -
+  // setting the transition and the target opacity in the same tick
+  // (right after a DOM update) can skip straight to the end state
+  // with no visible animation.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const targets = [document.getElementById("locateResult"), ...document.querySelectorAll(".ht-fc-current, .ht-df-current")];
+    targets.forEach(el => {
+      el.style.transition = `opacity ${LOCATE_FADE_MS}ms linear`;
+      el.style.opacity = "0";
+    });
+  }));
+  locateFadeTimer = setTimeout(() => {
+    currentDistrict = null;
+    showLocateResult("", "");
+    renderDistFilterPanel();
+    renderFieldCard();
+    locateFadeTimer = null;
+  }, LOCATE_FADE_MS);
+}
+
 function showLocateResult(kind, html){
+  clearLocateFade();
   const el = document.getElementById("locateResult");
   if(!html){ el.classList.add("ht-hidden"); el.innerHTML = ""; return; }
   el.className = "ht-locate-result" + (kind ? ` is-${kind}` : "");
@@ -1831,6 +1886,7 @@ function onLocateClick(){
   const btn = document.getElementById("locateBtn");
   if(!navigator.geolocation){
     showLocateResult("error", "Your browser doesn't support location lookup.");
+    scheduleLocateFade();
     return;
   }
   btn.disabled = true;
@@ -1863,8 +1919,10 @@ function onLocateClick(){
       document.getElementById("distFilterPanel").classList.remove("ht-hidden");
       renderDistFilterPanel();
       renderFieldCard();
+      scheduleLocateFade();
     }catch(e){
       showLocateResult("error", "Something went wrong loading district boundaries. Try again.");
+      scheduleLocateFade();
     }finally{
       btn.disabled = false;
       btn.textContent = "📍 Where Am I";
@@ -1876,6 +1934,7 @@ function onLocateClick(){
     showLocateResult("error", err.code === err.PERMISSION_DENIED
       ? "Location permission denied — allow it in your browser's site settings to use this."
       : "Couldn't get your location. Try again with a clear view of the sky.");
+    scheduleLocateFade();
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
 
