@@ -625,7 +625,7 @@ section{ padding:60px 0; }
 @media print{
   .mt-header, .page-intro, .ht-setup-toggle, #disclaimerSection, #profileSection,
   .ht-select-row, .ht-map-btn, .ht-map-modal, #districtNotes, #detailPanel, .ht-fieldcard-btn,
-  .ht-distfilter, .mt-footer, .ht-gate, .ht-quickview-toggle, .ht-locate-btn, #locateResult,
+  .ht-distfilter, .mt-footer, .ht-gate, .ht-quickview-toggle, .ht-locate-btn, .ht-locate-caveat, #locateResult,
   section > .container > p{
     display:none !important;
   }
@@ -815,6 +815,7 @@ section{ padding:60px 0; }
           </div>
           <button type="button" class="ht-locate-btn" id="locateBtn" onclick="onLocateClick()">&#128205; Where Am I</button>
         </div>
+        <p class="ht-caveat-note ht-locate-caveat">&#9888;&#65039; GPS and district boundaries here are approximate, not surveyed &mdash; don't trust it blindly. This is a best guess, not a legal determination of what district you're in. You are solely responsible for verifying your actual location before you hunt.</p>
         <div id="locateResult" class="ht-locate-result ht-hidden"></div>
         <div id="fieldCardView" style="margin-top:20px;"></div>
       </div>
