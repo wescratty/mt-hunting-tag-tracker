@@ -1,10 +1,14 @@
-# MT Hunting Tag Tracker
+# 2026 MT Hunting Tag Tracker
 
 A personal field-reference tool for southwest Montana deer & elk hunting districts — pick a district, pick a tag/opportunity, and see whether it's open right now, based on the tags and licenses you say you hold. Built to answer "wait, can I shoot a cow elk here today?" from a phone in the field, with no cell service required once it's loaded.
 
 Live at: `https://mt-hunting-tag-tracker.wescratty.workers.dev/` (Cloudflare Workers static assets).
 
 This project started as one page inside a larger site and was ported out into its own standalone repo/deploy so it could stand on its own — see the Log at the bottom of this file for that history.
+
+## Development process
+
+This app was built through **AI pair programming**: Claude Code (Anthropic's agentic coding CLI) acted as the implementation partner, writing the HTML/CSS/JS for every feature and fix in `index.html`, while I directed the work as architect and reviewer. My side of that included writing the requirements and feature specs, making the architecture calls — e.g. the `/index.html` vs `/` service-worker alias fix under "Offline support" below, and the decision to port this out of a larger site into its own standalone repo (see the Log) — reviewing every diff, testing each change live in-browser (desktop and mobile) before accepting it, and handling deployment myself. I also did ordinary code review on the AI's output the same way I would on any teammate's: for example, the "filling in one district removes the tag from the others it's valid in" logic documented above was corrected through that review after an early version got it wrong, not written correctly on the first pass.
 
 ## Files
 
@@ -14,6 +18,8 @@ This project started as one page inside a larger site and was ported out into it
 | `hunting-tags.webmanifest` | Web app manifest ("Add to Home Screen" support). |
 | `hunting-tags-sw.js` | Service worker — precaches the app shell so it works fully offline after the first load. |
 | `wrangler.jsonc` | Cloudflare Workers static-assets deploy config (`npx wrangler deploy`). |
+| `assets/hunting/mt-hunting-districts.geojson` | Simplified statewide FWP hunting-district boundaries, used by "Where Am I" (see below). |
+| `assets/js/turf.min.js` | Turf.js, vendored locally (not loaded from a CDN) so the offline guarantee below holds for "Where Am I" too. |
 | `assets/` | Fonts, app icons, and the FWP identification-guide illustrations + district map (see "Icons" below). |
 | `README.md` | This file. |
 
@@ -34,6 +40,8 @@ This project started as one page inside a larger site and was ported out into it
   **Filling in one district removes the tag from the others it's valid in** — same principle as the general license below, applied to Deer B/Elk B tags and permits. `tagFilledElsewhere()` (used by `tagPossessed()`) checks whether the *same code* has been filled under a different district's tag row; if so, that other row drops to "need" with a "you've already filled your `{code}` tag in a different district this season" message, while the one actually filled keeps showing normally. **Known gap**: a few codes (`260-01`, `262-02`) let a hunter legally buy up to 3 of the same tag, valid in any of several districts — this logic doesn't count that, so filling one hides the others even if more are still unused. Accepted as-is rather than building quantity tracking for two codes out of the whole dataset; the workaround is to uncheck and re-check "I filled this tag" on another of that code's districts to log a second animal.
 
   **One general license, spent everywhere at once**: `profile.hasDeerLicense`/`hasElkLicense` are single flags, not per-district — there's only one General Deer License and one General Elk License to hold, each good for one animal. Every "included with license" row for that species, in every district, is just a different possible way to fill that same one physical tag. `generalLicenseFilledElsewhere()` (used by `tagPossessed()`) checks whether *any other* General License row for that species has been filled anywhere; if so, every row but the one actually filled drops to "need" — off the Field Card, 🔒 in the dropdown — with the detail panel and license-note explicitly saying it's already filled on a different tag, rather than the generic "license not checked" text. Unfilling reverses it immediately. Deer B/Elk B tags and permits are unaffected — those are separate physical tags, tracked independently.
+- **Quick View**: a toggle (top-right, `onQuickViewToggle()`) for once setup is done and you're actually out hunting — hides the branding chrome, hunter profile, district/tag pickers, and everything else down to just the Field Card and its controls, so a phone screen shows nothing but "what can I hunt right now." Remembered per browser/device like the other toggles (`mt-hunt-quickview-v1`). "Exit Quick View" stays visible outside the hidden set so it's always reachable.
+- **Where Am I**: a button next to the Field Card controls (`onLocateClick()`) that asks the browser for the phone's GPS location and checks it against a simplified, statewide FWP hunting-district boundary file bundled with the app (`assets/hunting/mt-hunting-districts.geojson` — see "District boundary data" below), using Turf.js's point-in-polygon test. It deliberately does **not** touch `distFilter` or which districts the Field Card shows — it only marks the matching district, wherever it's already displayed (a 📍 next to it in the "Districts shown" panel, a green "you are here" border around its Field Card group), so a hunter's existing filter selections are never silently overridden. Three outcomes: the matched district is one of this app's 13 (highlighted as above); it's a real Montana HD but not one of the 13 this app covers yet (shows "Request HD `{number}` be added" pre-filled with the actual district number — see "Data source & scope"); or the location can't be matched to any district at all (rare — shows a plain error instead of guessing). Also handles permission-denied and no-geolocation-support cases with a clear message rather than failing silently. Nothing about the location is stored or sent anywhere; the match is in-memory only and resets on reload.
 - **Disclaimer gate**: blocks the whole page until the hunter checks an acknowledgment that this is a personal reference, not the regulations, and they're responsible for double-checking everything. Remembered per browser/device (`localStorage`), so it only shows once. Accepting it also auto-hides the identical on-page disclaimer copy right below (`acceptDisclaimer()` sets `hideDisclaimerCheck` and its `localStorage` key together) — no reason to make the hunter dismiss text they just read and agreed to a second time. `initHideToggle()` takes a `defaultHidden` param for exactly this: a returning hunter whose gate was accepted in an earlier visit, before ever touching "Hide disclaimer" here, gets the section defaulted to hidden too, not just first-time acceptance. Either way, an explicit past choice (the checkbox toggled by hand at some point) always wins over that default — `localStorage.getItem()` returning `null` (never explicitly set) is what triggers the default; `"0"` (explicitly shown) is respected as-is. The toggle up top still brings it back any time.
 
 ## Icons
@@ -68,6 +76,18 @@ A few entries in the data are flagged inline as "confirm current details" where 
 
 **This is not an authoritative legal source.** The disclaimer gate and the persistent privacy note both say so, and this README doesn't either — always confirm against [fwp.mt.gov](https://fwp.mt.gov/hunt/regulations).
 
+### District boundary data (for "Where Am I")
+
+`assets/hunting/mt-hunting-districts.geojson` covers all ~139 Montana hunting districts statewide (not just the 13 this app has tag data for) — "Where Am I" needs the whole state so it can name the real district number even when it's outside this app's coverage, for the "request it be added" flow. Sourced from FWP's own ArcGIS REST service, layer 11 ("Deer Elk Lion Hunting Districts"):
+
+```
+https://fwp-gis.mt.gov/arcgis/rest/services/admbnd/huntingDistricts/MapServer/11/query?where=1%3D1&outFields=DISTRICT,REG&outSR=4326&f=geojson
+```
+
+The raw export is ~42MB — far too much to ship and precache. It's simplified with `shapely`'s `simplify(tolerance, preserve_topology=True)` (Douglas–Peucker) at a 0.001° tolerance (roughly 90m at Montana's latitude) and coordinates rounded to 5 decimal places, bringing it down to ~1.3MB. That tolerance was chosen by checking known points against both the raw and simplified data until they agreed — see the Log entry below for the exact points checked. Per-feature simplification like this doesn't preserve shared borders between adjacent districts (small gaps/slivers are possible right at a boundary line), which is an accepted tradeoff here: GPS accuracy in the field is usually worse than that anyway, and the app already surfaces the accuracy radius so a boundary-adjacent result reads as approximate rather than certain.
+
+FWP's own metadata notes district boundaries are "reviewed annually and may change," so treat this file the same as the season data — re-pull and re-simplify it periodically, not just once.
+
 ### Updating for a new season
 
 All season dates live as named constants near the top of the `<script>` block in `index.html` (`P_ARCH`, `P_GEN`, `P_MUZZ`, `P_LATE`, etc.) — one edit to a constant updates every tag that references it. District-specific exceptions (e.g. HD 260's archery-district general season, HD 262's short buck-permit window) have their own named constants for the same reason. The `DISTRICTS` object below that holds each district's tag list, referencing those phase constants plus per-tag `restriction`, `issue`, and optional `eligibility` fields.
@@ -86,12 +106,13 @@ Everything is `localStorage`, scoped to whichever browser/device it's opened on 
 - `mt-hunt-profile-v1` — age, PTHFV, Bow and Arrow License, General Deer/Elk License.
 - `mt-hunt-distfilter-v1` — which districts the Field Card shows.
 - `mt-hunt-disclaimer-accepted-v1` — whether the gate has been accepted on this browser.
+- `mt-hunt-quickview-v1` — whether Quick View is on.
 
 Because it's per-browser, filling it out on a PC does **not** carry over to a phone — the page itself says this in the privacy note, but it's worth remembering when testing.
 
 ## Offline support
 
-`hunting-tags-sw.js` precaches an explicit allowlist of same-origin paths (the page itself, the Rye font, the app icons, the district map image, all icon images) on first load, then serves them cache-first so the page works with zero connectivity afterward — closed tab, airplane mode, phone restart, etc.
+`hunting-tags-sw.js` precaches an explicit allowlist of same-origin paths (the page itself, the Rye font, the app icons, the district map image, all icon images, the district boundary GeoJSON, and Turf.js) on first load, then serves them cache-first so the page works with zero connectivity afterward — closed tab, airplane mode, phone restart, etc. Turf.js is vendored locally (`assets/js/turf.min.js`) rather than loaded from a CDN specifically so "Where Am I" doesn't quietly depend on a third-party host being reachable — the whole point of this app is that it keeps working with no signal at all.
 
 **The `/index.html` vs `/` alias** (read this before touching the service worker): Cloudflare's static-asset hosting 307-redirects a request for `/index.html` to the clean canonical URL `/`. Chrome refuses to let a service worker satisfy a top-level navigation with a response reached via a followed redirect — this combination produces `net::ERR_FAILED` for any visitor who types/bookmarks/links the `/index.html` form once the service worker is installed. `hunting-tags-sw.js` handles this by treating `/index.html` and `/` as one resource end to end (`canonicalPath()`), so the fix is already in place from this repo's first commit — this cost real debugging time on the site this app was ported from (a sibling `.html` page under a shared domain hit the exact same bug in production), don't reintroduce it by precaching a literal `.html` path here.
 
@@ -120,3 +141,4 @@ Reads `wrangler.jsonc` (`name: "mt-hunting-tag-tracker"`). First deploy gets a f
 ## Log
 
 - 2026-09-07: Ported out of a larger multi-page site into this standalone repo (git history before this point lives in that other repo, not here). Rewrote all asset paths for a flat single-app layout, replaced the shared site's header/nav/footer with a minimal standalone version, replaced localStorage key prefixes (`wtc-hunting-` → `mt-hunt-`), replaced the parent site's shared branding/logo/favicons with a placeholder mountain icon (real logo/icon design still open, see any open issues), pointed the "request a district" link at this repo's GitHub Issues instead of a contact form that no longer applies here, and updated the service worker's precache list and `.html`-alias handling for the new `/` root layout. App logic, data, and UI behavior are otherwise unchanged from the source.
+- 2026-09-08: Added Quick View and "Where Am I". Pulled FWP's statewide hunting-district boundaries (ArcGIS layer 11), simplified with `shapely` at 0.001° tolerance (~90m), and sanity-checked the simplified file against the raw export at three points (Hamilton → HD 260, Wisdom → HD 321, Dillon → HD 324) before shipping it — all three matched. Vendored Turf.js locally instead of pulling it from a CDN so the offline guarantee holds for this feature too.
