@@ -460,6 +460,7 @@ section{ padding:60px 0; }
   margin-left:-3px;
   padding-left:8px !important;
 }
+.ht-locate-pin{ color:#2e7d32; font-weight:700; }
 
 .ht-setup-toggle{
   display:flex;
@@ -1773,7 +1774,7 @@ function renderDistFilterPanel(){
   panel.innerHTML = DISTRICT_ORDER.map(id => `
     <label class="${id === currentDistrict ? "ht-df-current" : ""}">
       <input type="checkbox" data-dist="${id}" ${distFilter.includes(id) ? "checked" : ""} onchange="onDistFilterCheck('${id}', this.checked)">
-      HD ${id} — ${DISTRICTS[id].name}${id === currentDistrict ? " &#128205;" : ""}
+      HD ${id} — ${DISTRICTS[id].name}${id === currentDistrict ? ' <span class="ht-locate-pin">&#128205;</span>' : ""}
     </label>`).join("") + `
     <div class="ht-df-actions">
       <a onclick="setAllDistFilter(true)">All</a>
@@ -1846,22 +1847,52 @@ function requestUnsupportedDistrict(distId){
    current if glanced at later. */
 const LOCATE_FADE_MS = 30000;
 
+/* Only the highlight chrome fades - never the Field Card content
+   itself. Fading `opacity` on the whole `.ht-fc-district` wrapper
+   would take the tag icons down with it, which reads as "these tags
+   are disappearing," not "the location guess is aging out." So the
+   result banner fades via opacity (it's just text, fine to fade
+   whole), but the district highlight fades via its border/background
+   colors only, and the "you are here" pin text fades via its own
+   `.ht-locate-pin` span - the icons and district name never move. */
 function clearLocateFade(){
   if(locateFadeTimer){ clearTimeout(locateFadeTimer); locateFadeTimer = null; }
-  const targets = [document.getElementById("locateResult"), ...document.querySelectorAll(".ht-fc-current, .ht-df-current")];
-  targets.forEach(el => { el.style.transition = ""; el.style.opacity = ""; });
+  const result = document.getElementById("locateResult");
+  result.style.transition = ""; result.style.opacity = "";
+  document.querySelectorAll(".ht-fc-current").forEach(el => {
+    el.style.transition = ""; el.style.boxShadow = ""; el.style.backgroundColor = "";
+  });
+  document.querySelectorAll(".ht-df-current").forEach(el => {
+    el.style.transition = ""; el.style.backgroundColor = ""; el.style.borderLeftColor = "";
+  });
+  document.querySelectorAll(".ht-locate-pin").forEach(el => {
+    el.style.transition = ""; el.style.opacity = "";
+  });
 }
 
 function scheduleLocateFade(){
   clearLocateFade();
   // Double rAF so the browser paints the fully-visible state first -
-  // setting the transition and the target opacity in the same tick
+  // setting the transition and the target value in the same tick
   // (right after a DOM update) can skip straight to the end state
   // with no visible animation.
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    const targets = [document.getElementById("locateResult"), ...document.querySelectorAll(".ht-fc-current, .ht-df-current")];
-    targets.forEach(el => {
-      el.style.transition = `opacity ${LOCATE_FADE_MS}ms linear`;
+    const dur = `${LOCATE_FADE_MS}ms linear`;
+    const result = document.getElementById("locateResult");
+    result.style.transition = `opacity ${dur}`;
+    result.style.opacity = "0";
+    document.querySelectorAll(".ht-fc-current").forEach(el => {
+      el.style.transition = `box-shadow ${dur}, background-color ${dur}`;
+      el.style.boxShadow = "0 0 0 0 rgba(46,125,50,0)";
+      el.style.backgroundColor = "transparent";
+    });
+    document.querySelectorAll(".ht-df-current").forEach(el => {
+      el.style.transition = `background-color ${dur}, border-left-color ${dur}`;
+      el.style.backgroundColor = "transparent";
+      el.style.borderLeftColor = "transparent";
+    });
+    document.querySelectorAll(".ht-locate-pin").forEach(el => {
+      el.style.transition = `opacity ${dur}`;
       el.style.opacity = "0";
     });
   }));
@@ -1993,7 +2024,7 @@ function renderFieldCard(){
       return true;
     });
 
-    html += `<div class="ht-fc-district${distId === currentDistrict ? " ht-fc-current" : ""}"><h4>HD ${distId} — ${d.name}${distId === currentDistrict ? " &#128205; you are here" : ""}</h4><div class="ht-fc-grid">`;
+    html += `<div class="ht-fc-district${distId === currentDistrict ? " ht-fc-current" : ""}"><h4>HD ${distId} — ${d.name}${distId === currentDistrict ? ' <span class="ht-locate-pin">&#128205; you are here</span>' : ""}</h4><div class="ht-fc-grid">`;
     huntableNow.forEach(t => {
       const caveats = tagCaveats(t);
       const isFilled = tagNeedsManualConfirm(t) ? hasFilledTag(distId, t.id) : (hasFilledTag(distId, t.id) || iconFilledMap[t.icon]);
