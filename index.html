@@ -451,13 +451,23 @@ section{ padding:60px 0; }
 }
 .ht-locate-btn:hover{ background:var(--navy-light); }
 .ht-locate-btn:disabled{ background:var(--text-muted); cursor:wait; }
+/* Fixed/floating, not in normal flow - so it can appear, fade, and
+   clear itself without ever pushing the Field Card (or anything
+   else) up or down. */
 .ht-locate-result{
-  margin-top:12px;
+  position:fixed;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:1800;
+  width:calc(100% - 40px);
+  max-width:420px;
   padding:12px 14px;
   border-radius:6px;
   font-size:0.9rem;
   background:var(--cream-dark);
   border-left:4px solid var(--text-muted);
+  box-shadow:0 6px 20px rgba(0,0,0,0.25);
 }
 .ht-locate-result.is-good{ background:#eaf3ea; border-left-color:#2e7d32; color:#245c27; }
 .ht-locate-result.is-warn{ background:#fff6e5; border-left-color:var(--gold); color:#5a4321; }
