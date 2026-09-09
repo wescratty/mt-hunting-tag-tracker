@@ -431,9 +431,8 @@ section{ padding:60px 0; }
 }
 .ht-qv-btn:hover{ background:var(--cream-dark); }
 .ht-quickview .mt-header, .ht-quickview .page-intro, .ht-quickview .ht-setup-toggle,
-.ht-quickview #disclaimerSection, .ht-quickview #profileSection, .ht-quickview .ht-select-row,
-.ht-quickview .ht-district-request, .ht-quickview .ht-map-btn, .ht-quickview #districtNotes,
-.ht-quickview #detailPanel, .ht-quickview .mt-footer{
+.ht-quickview #disclaimerSection, .ht-quickview #profileSection, .ht-quickview #myTagsSection,
+.ht-quickview .mt-footer{
   display:none !important;
 }
 .ht-quickview section{ padding-top:20px; }
@@ -527,13 +526,103 @@ section{ padding:60px 0; }
   margin:12px 0 0 auto;
   padding:9px 18px;
   border-radius:4px;
+  border:none;
+  background:var(--navy);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+.ht-done-btn:hover{ background:var(--navy-light); }
+.ht-done-btn:disabled{ background:var(--text-muted); color:#fff; cursor:not-allowed; }
+
+.ht-info-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:20px;
+  height:20px;
+  margin-left:6px;
+  border-radius:50%;
+  border:1px solid var(--navy);
+  background:#fff;
+  color:var(--navy);
+  font-size:0.8rem;
+  font-weight:700;
+  line-height:1;
+  cursor:pointer;
+  vertical-align:middle;
+  padding:0;
+}
+.ht-info-btn:hover{ background:var(--cream-dark); }
+.ht-qv-popup-text{ text-align:left; font-size:0.9rem; color:var(--text); margin:10px 0 0; line-height:1.5; }
+
+.ht-tags-mode-toggle{
+  display:flex;
+  gap:8px;
+  margin-bottom:18px;
+}
+.ht-tags-mode-btn{
+  flex:1;
+  padding:9px 14px;
+  border-radius:4px;
   border:1px solid var(--border);
   background:#fff;
   color:var(--navy);
   font-weight:700;
   cursor:pointer;
 }
-.ht-done-btn:disabled{ color:var(--text-muted); cursor:not-allowed; }
+.ht-tags-mode-btn.is-active{
+  background:var(--navy);
+  color:#fff;
+  border-color:var(--navy);
+}
+.ht-copy-wishlist-btn{
+  display:block;
+  margin:0 0 18px;
+  padding:9px 16px;
+  border-radius:4px;
+  border:1px solid var(--gold);
+  background:#fff6e5;
+  color:var(--gold-dark);
+  font-weight:700;
+  cursor:pointer;
+}
+.ht-copy-wishlist-btn:hover{ background:#fbe9c8; }
+
+.ht-tag-search-row{ margin-bottom:16px; }
+.ht-tag-search-row input{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  font-size:1rem;
+}
+.ht-tag-list-row{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:14px 0;
+  border-bottom:1px solid var(--border);
+}
+.ht-tag-list-row:last-child{ border-bottom:none; }
+.ht-tag-list-icon{ width:56px; height:56px; flex-shrink:0; }
+.ht-tag-list-icon img{ width:100%; height:100%; object-fit:contain; display:block; }
+.ht-tag-list-info{ flex:1; min-width:0; }
+.ht-tag-list-title{ font-weight:700; color:var(--navy); }
+.ht-tag-list-sub{ font-size:0.85rem; color:var(--text-muted); margin:2px 0 8px; }
+.ht-tag-list-info .ht-check{ margin-top:6px; }
+
+.ht-wishlist-toggle{
+  margin-top:12px;
+  padding:14px 16px;
+  background:#fff6e5;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.ht-wishlist-toggle input{ width:22px; height:22px; accent-color:var(--gold-dark); }
+.ht-wishlist-toggle label{ font-weight:700; color:var(--gold-dark); }
 
 .ht-privacy-note{
   background:#eef2ea;
@@ -669,8 +758,8 @@ section{ padding:60px 0; }
 }
 
 @media print{
-  .mt-header, .page-intro, .ht-setup-toggle, #disclaimerSection, #profileSection,
-  .ht-select-row, .ht-map-btn, .ht-map-modal, #districtNotes, #detailPanel, .ht-fieldcard-btn,
+  .mt-header, .page-intro, .ht-setup-toggle, #disclaimerSection, #profileSection, #myTagsSection,
+  .ht-map-modal, .ht-fieldcard-btn,
   .ht-distfilter, .mt-footer, .ht-gate, .ht-quickview-toggle, .ht-locate-btn, .ht-locate-caveat, #locateResult, .ht-qv-popup,
   section > .container > p{
     display:none !important;
@@ -757,6 +846,10 @@ section{ padding:60px 0; }
           <input type="checkbox" id="hideLocateCaveatCheck" onchange="onHideLocateCaveatChange()">
           Hide GPS notice
         </label>
+        <label for="hideMyTagsCheck">
+          <input type="checkbox" id="hideMyTagsCheck" onchange="onHideMyTagsChange()">
+          Hide my tags
+        </label>
       </div>
 
       <div id="disclaimerSection">
@@ -802,21 +895,24 @@ section{ padding:60px 0; }
       </div>
 
       <fieldset id="profileSection">
-        <legend>Hunter Profile</legend>
+        <legend>Hunter Profile <button type="button" class="ht-info-btn" onclick="showProfileInfoPopup()" aria-label="What is this for?">&#9432;</button></legend>
         <div class="ht-row">
-          <div class="ht-field">
-            <label for="pAge">Your age</label>
-            <input type="number" id="pAge" min="0" max="120" placeholder="e.g. 14">
+          <div class="ht-check">
+            <input type="checkbox" id="pAgeMin">
+            <label for="pAgeMin">I am 10 years old or older</label>
           </div>
-          <div class="ht-field">
-            <label>&nbsp;</label>
-            <div class="ht-check">
-              <input type="checkbox" id="pPthfv">
-              <label for="pPthfv">PTHFV holder (Permit to Hunt from a Vehicle)</label>
-            </div>
+          <div class="ht-check">
+            <input type="checkbox" id="pAgeMax">
+            <label for="pAgeMax">I am 15 years old or younger</label>
           </div>
         </div>
-        <div class="ht-row" style="margin-top:14px;">
+        <div class="ht-row" style="margin-top:10px;">
+          <div class="ht-check">
+            <input type="checkbox" id="pPthfv">
+            <label for="pPthfv">PTHFV holder (Permit to Hunt from a Vehicle)</label>
+          </div>
+        </div>
+        <div class="ht-row" style="margin-top:10px;">
           <div class="ht-check">
             <input type="checkbox" id="pDeerLic">
             <label for="pDeerLic">I have a General Deer License</label>
@@ -830,38 +926,53 @@ section{ padding:60px 0; }
             <label for="pBowLic">I have a Bow and Arrow License (archery stamp)</label>
           </div>
         </div>
-        <p style="margin:12px 0 0;font-size:0.85rem;color:var(--text-muted);">
-          Age and PTHFV status are used to check youth- and PTHFV-only opportunities. Your general licenses
-          cover every "included with license" opportunity below &mdash; separate Deer B / Elk B tags and
-          permits are still confirmed one at a time further down. The Bow and Arrow License is required
-          any time you're hunting an Archery Only season or an ArchEquip-only area/district (MCA 87-2-708) &mdash;
-          it's checked automatically wherever that applies.
-        </p>
         <button type="button" class="ht-done-btn" onclick="onProfileDoneClick()">Done &#10003;</button>
       </fieldset>
 
-      <div class="ht-select-row">
-        <div class="ht-select-field">
-          <label for="districtSelect">Hunting District</label>
-          <select id="districtSelect" onchange="onDistrictChange()">
-            <option value="">Choose a district&hellip;</option>
-          </select>
-        </div>
-        <div class="ht-select-field">
-          <label for="tagSelect">Tag / Opportunity</label>
-          <select id="tagSelect" onchange="onTagChange()" disabled>
-            <option value="">Choose a district first&hellip;</option>
-          </select>
-        </div>
-      </div>
-      <p class="ht-district-request">
-        Don't see your district? <a href="https://github.com/wescratty/mt-hunting-tag-tracker/issues/new?title=Add%20hunting%20district%3A%20&body=I%27d%20like%20to%20request%20that%20this%20hunting%20district%20be%20added%20to%20the%20tracker%3A%0A%0ADistrict%3A%20" target="_blank" rel="noopener">Request it be added</a>
-      </p>
+      <fieldset id="myTagsSection">
+        <legend>My Tags</legend>
 
-      <button type="button" class="ht-map-btn" onclick="toggleMapModal()">&#128506;&#65039; District Map</button>
+        <div class="ht-tags-mode-toggle">
+          <button type="button" class="ht-tags-mode-btn is-active" id="tagsModeDistrictBtn" onclick="setTagsMode('district')">By District</button>
+          <button type="button" class="ht-tags-mode-btn" id="tagsModeSearchBtn" onclick="setTagsMode('search')">By Tag</button>
+        </div>
 
-      <div id="districtNotes"></div>
-      <div id="detailPanel"></div>
+        <button type="button" class="ht-copy-wishlist-btn" id="copyWishlistBtn" onclick="copyWishList()">&#128203; Copy Wish List</button>
+
+        <div id="tagsByDistrictView">
+          <div class="ht-select-row">
+            <div class="ht-select-field">
+              <label for="districtSelect">Hunting District</label>
+              <select id="districtSelect" onchange="onDistrictChange()">
+                <option value="">Choose a district&hellip;</option>
+              </select>
+            </div>
+            <div class="ht-select-field">
+              <label for="tagSelect">Tag / Opportunity</label>
+              <select id="tagSelect" onchange="onTagChange()" disabled>
+                <option value="">Choose a district first&hellip;</option>
+              </select>
+            </div>
+          </div>
+          <p class="ht-district-request">
+            Don't see your district? <a href="https://github.com/wescratty/mt-hunting-tag-tracker/issues/new?title=Add%20hunting%20district%3A%20&body=I%27d%20like%20to%20request%20that%20this%20hunting%20district%20be%20added%20to%20the%20tracker%3A%0A%0ADistrict%3A%20" target="_blank" rel="noopener">Request it be added</a>
+          </p>
+
+          <button type="button" class="ht-map-btn" onclick="toggleMapModal()">&#128506;&#65039; District Map</button>
+
+          <div id="districtNotes"></div>
+          <div id="detailPanel"></div>
+        </div>
+
+        <div id="tagsBySearchView" class="ht-hidden">
+          <div class="ht-tag-search-row">
+            <input type="text" id="tagSearchInput" placeholder="Search by HD number or tag code&hellip;" oninput="renderTagList()">
+          </div>
+          <div id="tagListView"></div>
+        </div>
+
+        <button type="button" class="ht-done-btn" onclick="onMyTagsDoneClick()">Done &#10003;</button>
+      </fieldset>
 
       <div style="margin-top:30px;border-top:1px solid var(--border);padding-top:22px;">
         <div class="ht-fc-controls">
@@ -1175,7 +1286,9 @@ const DISCLAIMER_KEY = "mt-hunt-disclaimer-accepted-v1";
 const HIDEDISCLAIMER_KEY = "mt-hunt-hidedisclaimer-v1";
 const HIDEPROFILE_KEY = "mt-hunt-hideprofile-v1";
 const HIDELOCATECAVEAT_KEY = "mt-hunt-hidelocatecaveat-v1";
+const HIDEMYTAGS_KEY = "mt-hunt-hidemytags-v1";
 const QUICKVIEW_KEY = "mt-hunt-quickview-v1";
+const WISHLIST_KEY = "mt-hunt-wishlist-v1";
 
 /* Precaches the app shell on first (online) visit so the page - and
    everything it needs to run - keeps working with zero signal after
@@ -1212,7 +1325,8 @@ function toggleMapModal(){
 
 let tagState = loadJSON(TAG_KEY, {});
 let filledState = loadJSON(FILLED_KEY, {});
-let profile = loadJSON(PROFILE_KEY, {age:null, pthfv:false, hasDeerLicense:false, hasElkLicense:false, hasBowLicense:false});
+let wishlistState = loadJSON(WISHLIST_KEY, {});
+let profile = loadJSON(PROFILE_KEY, {ageOverMin:false, ageUnderMax:false, pthfv:false, hasDeerLicense:false, hasElkLicense:false, hasBowLicense:false});
 let distFilter = loadJSON(DISTFILTER_KEY, []); // [] = nothing shown until the hunter picks districts
 let currentDistrict = null; // last "where am I" locate match, in-memory only (not persisted)
 let districtBoundaries = null; // lazy-loaded + cached statewide GeoJSON for locate lookups
@@ -1220,6 +1334,7 @@ let locateFadeTimer = null; // pending "fade the stale locate result away" timer
 
 function saveTagState(){ saveJSON(TAG_KEY, tagState); }
 function saveFilledState(){ saveJSON(FILLED_KEY, filledState); }
+function saveWishlistState(){ saveJSON(WISHLIST_KEY, wishlistState); }
 function saveProfile(){ saveJSON(PROFILE_KEY, profile); }
 
 function hasConfirmedTag(distId, tagId){ return !!(tagState[distId] && tagState[distId][tagId]); }
@@ -1234,6 +1349,13 @@ function setFilledTag(distId, tagId, val){
   if(!filledState[distId]) filledState[distId] = {};
   filledState[distId][tagId] = val;
   saveFilledState();
+}
+
+function hasWishlistTag(distId, tagId){ return !!(wishlistState[distId] && wishlistState[distId][tagId]); }
+function setWishlistTag(distId, tagId, val){
+  if(!wishlistState[distId]) wishlistState[distId] = {};
+  wishlistState[distId][tagId] = val;
+  saveWishlistState();
 }
 
 /* Many Deer B / Elk B tags and permits are explicitly one physical
@@ -1323,13 +1445,22 @@ function tagPossessed(distId, tag){
 
 /* Whether the hunter's profile (age / PTHFV) meets a special
    opportunity's eligibility gate. No gate = always eligible. */
+/* Age is tracked as two simple "10 or older" / "15 or younger"
+   checkboxes rather than an exact age - both checked covers every
+   youth-eligible tag in the current data (youth ranges are 10-15 or
+   12-15; using the wider bound means a 10-11 year old shows as
+   eligible for a 12-15-only opportunity too - the tag's own
+   Eligibility line still states the real range, so this is a known,
+   accepted simplification, not hidden information). There's no
+   profile-level "senior" checkbox, so the handful of 75+-only
+   opportunities won't auto-unlock from the profile - eligibilityText()
+   below still surfaces the requirement so a senior hunter can see
+   they qualify even though the app can't detect it automatically. */
 function tagEligible(tag){
   const e = tag.eligibility;
   if(!e) return true;
-  const age = profile.age;
-  if(e.youthMin != null && age != null && age >= e.youthMin && age <= e.youthMax) return true;
+  if(e.youthMin != null && profile.ageOverMin && profile.ageUnderMax) return true;
   if(e.pthfv && profile.pthfv) return true;
-  if(e.seniorMin != null && age != null && age >= e.seniorMin) return true;
   return false;
 }
 function eligibilityText(tag){
@@ -1463,6 +1594,7 @@ try{ gateAlreadyAccepted = localStorage.getItem(DISCLAIMER_KEY) === "1"; }catch(
 initHideToggle("hideDisclaimerCheck", "disclaimerSection", HIDEDISCLAIMER_KEY, gateAlreadyAccepted);
 initHideToggle("hideProfileCheck", "profileSection", HIDEPROFILE_KEY, false);
 initHideToggle("hideLocateCaveatCheck", "locateCaveatSection", HIDELOCATECAVEAT_KEY, false);
+initHideToggle("hideMyTagsCheck", "myTagsSection", HIDEMYTAGS_KEY, false);
 
 function onHideDisclaimerChange(){
   const hidden = document.getElementById("hideDisclaimerCheck").checked;
@@ -1488,6 +1620,130 @@ function onProfileDoneClick(){
   onHideProfileChange();
 }
 
+function onHideMyTagsChange(){
+  const hidden = document.getElementById("hideMyTagsCheck").checked;
+  document.getElementById("myTagsSection").classList.toggle("ht-hidden", hidden);
+  try{ localStorage.setItem(HIDEMYTAGS_KEY, hidden ? "1" : "0"); }catch(e){}
+}
+function onMyTagsDoneClick(){
+  document.getElementById("hideMyTagsCheck").checked = true;
+  onHideMyTagsChange();
+}
+
+/* By District (the original dropdowns) vs By Tag (a flat, searchable
+   list of every manually-confirmable tag across all districts, for
+   quickly checking off everything you bought without hunting for
+   each one's district first). Not persisted - always opens on By
+   District, same as fieldCardOpen not being persisted either. */
+let tagsMode = "district";
+function setTagsMode(mode){
+  tagsMode = mode;
+  document.getElementById("tagsByDistrictView").classList.toggle("ht-hidden", mode !== "district");
+  document.getElementById("tagsBySearchView").classList.toggle("ht-hidden", mode !== "search");
+  document.getElementById("tagsModeDistrictBtn").classList.toggle("is-active", mode === "district");
+  document.getElementById("tagsModeSearchBtn").classList.toggle("is-active", mode === "search");
+  if(mode === "search") renderTagList();
+}
+
+/* Every Deer B/Elk B tag and permit across all 13 districts - the
+   "included with license" rows aren't listed here since there's
+   nothing to individually confirm for those (the license checkboxes
+   in Hunter Profile already cover them). */
+function allManualConfirmTags(){
+  const list = [];
+  DISTRICT_ORDER.forEach(distId => {
+    DISTRICTS[distId].tags.forEach(t => {
+      if(tagNeedsManualConfirm(t)) list.push({distId, tag: t});
+    });
+  });
+  return list;
+}
+
+function renderTagList(){
+  const q = (document.getElementById("tagSearchInput").value || "").trim().toLowerCase();
+  const view = document.getElementById("tagListView");
+  let items = allManualConfirmTags();
+  if(q){
+    items = items.filter(({distId, tag}) =>
+      distId.includes(q) || tag.code.toLowerCase().includes(q) || tag.label.toLowerCase().includes(q)
+    );
+  }
+  if(!items.length){
+    view.innerHTML = `<p style="color:var(--text-muted);">No tags match "${q}".</p>`;
+    return;
+  }
+  view.innerHTML = items.map(({distId, tag}) => {
+    const confirmed = hasConfirmedTag(distId, tag.id);
+    const wished = hasWishlistTag(distId, tag.id);
+    return `
+      <div class="ht-tag-list-row">
+        <div class="ht-tag-list-icon">${tagIconImg(tag)}</div>
+        <div class="ht-tag-list-info">
+          <div class="ht-tag-list-title">HD ${distId} &mdash; ${tag.code}</div>
+          <div class="ht-tag-list-sub">${tag.label}</div>
+          <label class="ht-check">
+            <input type="checkbox" ${confirmed ? "checked" : ""} onchange="onTagListConfirmChange('${distId}','${tag.id}', this.checked)">
+            I have this tag
+          </label>
+          <label class="ht-check">
+            <input type="checkbox" ${wished ? "checked" : ""} onchange="onTagListWishlistChange('${distId}','${tag.id}', this.checked)">
+            Add to wish list
+          </label>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+/* Same effect as confirming a tag from its own detail panel
+   (onConfirmChange): marks every district that shares this code held,
+   and turns those districts on in the Field Card filter - but without
+   touching the By District dropdowns, so switching back to that view
+   doesn't jump to whatever was last checked here. */
+function onTagListConfirmChange(distId, tagId, checked){
+  const tag = findTag(distId, tagId);
+  const matches = findTagsByCode(tag.code, tag.species);
+  matches.forEach(({distId: d, tag: t}) => setConfirmedTag(d, t.id, checked));
+  if(checked){
+    matches.forEach(({distId: d}) => {
+      if(!distFilter.includes(d)) distFilter.push(d);
+    });
+    saveJSON(DISTFILTER_KEY, distFilter);
+    renderDistFilterPanel();
+  }
+  renderFieldCard();
+  renderTagList();
+}
+function onTagListWishlistChange(distId, tagId, checked){
+  setWishlistTag(distId, tagId, checked);
+}
+
+/* Pulls every wishlisted tag regardless of which view added it (the
+   By Tag list or a tag's own detail panel) into one plain-text list,
+   grouped in district order, ready to paste into a text message or
+   note before a draw-application deadline. */
+function copyWishList(){
+  const items = [];
+  DISTRICT_ORDER.forEach(distId => {
+    DISTRICTS[distId].tags.forEach(t => {
+      if(hasWishlistTag(distId, t.id)) items.push({distId, tag: t});
+    });
+  });
+  const btn = document.getElementById("copyWishlistBtn");
+  const original = btn.innerHTML;
+  if(!items.length){
+    btn.textContent = "Wish list is empty";
+    setTimeout(() => { btn.innerHTML = original; }, 2000);
+    return;
+  }
+  const text = items.map(({distId, tag}) => `HD ${distId} — ${DISTRICTS[distId].name} — ${tag.code} — ${tag.label}`).join("\n");
+  const flash = (msg) => { btn.textContent = msg; setTimeout(() => { btn.innerHTML = original; }, 2000); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(() => flash("Copied!")).catch(() => flash("Couldn't copy"));
+  }else{
+    flash("Couldn't copy");
+  }
+}
+
 /* Quick View - for once setup is done and you're actually out
    hunting: strips the branding/setup chrome down to just the Field
    Card and its controls, so a phone screen shows nothing but "what
@@ -1506,20 +1762,20 @@ function onQuickViewToggle(){
   try{ localStorage.setItem(QUICKVIEW_KEY, on ? "1" : "0"); }catch(e){}
 }
 
-document.getElementById("pAge").value = profile.age != null ? profile.age : "";
+document.getElementById("pAgeMin").checked = !!profile.ageOverMin;
+document.getElementById("pAgeMax").checked = !!profile.ageUnderMax;
 document.getElementById("pPthfv").checked = !!profile.pthfv;
 document.getElementById("pDeerLic").checked = !!profile.hasDeerLicense;
 document.getElementById("pElkLic").checked = !!profile.hasElkLicense;
 document.getElementById("pBowLic").checked = !!profile.hasBowLicense;
 
-["pAge","pPthfv","pDeerLic","pElkLic","pBowLic"].forEach(id => {
+["pAgeMin","pAgeMax","pPthfv","pDeerLic","pElkLic","pBowLic"].forEach(id => {
   document.getElementById(id).addEventListener("change", onProfileChange);
 });
-document.getElementById("pAge").addEventListener("input", onProfileChange);
 
 function onProfileChange(){
-  const ageVal = document.getElementById("pAge").value;
-  profile.age = ageVal === "" ? null : parseInt(ageVal, 10);
+  profile.ageOverMin = document.getElementById("pAgeMin").checked;
+  profile.ageUnderMax = document.getElementById("pAgeMax").checked;
   profile.pthfv = document.getElementById("pPthfv").checked;
   profile.hasDeerLicense = document.getElementById("pDeerLic").checked;
   profile.hasElkLicense = document.getElementById("pElkLic").checked;
@@ -1653,25 +1909,45 @@ function jumpToTag(distId, tagId){
   detailPanel.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
+/* Generic tap-anywhere-to-close popup - originally built just for
+   the Quick View tag tap, now reused for the Hunter Profile info
+   icon too. autoCloseMs is optional: the Quick View tag popup times
+   out on its own, but an info popup someone deliberately opened
+   stays up until they dismiss it. */
 let qvPopupTimer = null;
 const QV_POPUP_MS = 5000;
-function showQvPopup(distId, tagId){
-  const tag = findTag(distId, tagId);
-  if(!tag) return;
+function showInfoPopupHTML(html, autoCloseMs){
   clearTimeout(qvPopupTimer);
-  document.getElementById("qvPopupInner").innerHTML = `
-    ${tagIconImg(tag)}
-    <div class="ht-qv-popup-code">${tagIdentityLabel(tag)}</div>
-    <h3>${tag.label}</h3>
-    <p class="ht-qv-popup-hint">Tap anywhere to close</p>
-  `;
+  qvPopupTimer = null;
+  document.getElementById("qvPopupInner").innerHTML = html;
   document.getElementById("qvPopup").classList.remove("ht-hidden");
-  qvPopupTimer = setTimeout(hideQvPopup, QV_POPUP_MS);
+  if(autoCloseMs) qvPopupTimer = setTimeout(hideQvPopup, autoCloseMs);
 }
 function hideQvPopup(){
   clearTimeout(qvPopupTimer);
   qvPopupTimer = null;
   document.getElementById("qvPopup").classList.add("ht-hidden");
+}
+function showQvPopup(distId, tagId){
+  const tag = findTag(distId, tagId);
+  if(!tag) return;
+  showInfoPopupHTML(`
+    ${tagIconImg(tag)}
+    <div class="ht-qv-popup-code">${tagIdentityLabel(tag)}</div>
+    <h3>${tag.label}</h3>
+    <p class="ht-qv-popup-hint">Tap anywhere to close</p>
+  `, QV_POPUP_MS);
+}
+function showProfileInfoPopup(){
+  showInfoPopupHTML(`
+    <h3 style="margin-top:0;">About your profile</h3>
+    <p class="ht-qv-popup-text">The age checkboxes and PTHFV status are used to check youth- and PTHFV-only
+      opportunities. Your general licenses cover every "included with license" opportunity below &mdash;
+      separate Deer B / Elk B tags and permits are still confirmed one at a time in My Tags. The Bow and
+      Arrow License is required any time you're hunting an Archery Only season or an ArchEquip-only
+      area/district (MCA 87-2-708) &mdash; it's checked automatically wherever that applies.</p>
+    <p class="ht-qv-popup-hint">Tap anywhere to close</p>
+  `);
 }
 
 function findTag(distId, tagId){
@@ -1739,6 +2015,10 @@ function renderDetail(distId, tagId){
       <div class="ht-confirm">
         <input type="checkbox" id="confirmBox" ${confirmed ? "checked" : ""} onchange="onConfirmChange('${distId}','${tag.id}')">
         <label for="confirmBox">I have this tag</label>
+      </div>
+      <div class="ht-wishlist-toggle">
+        <input type="checkbox" id="wishlistBox" ${hasWishlistTag(distId, tag.id) ? "checked" : ""} onchange="onWishlistChange('${distId}','${tag.id}')">
+        <label for="wishlistBox">Add tag to wish list</label>
       </div>
       ${shareNote}`;
   } else {
@@ -1834,6 +2114,11 @@ function onFilledChange(distId, tagId){
   setFilledTag(distId, tagId, val);
   renderDetail(distId, tagId);
   renderFieldCard();
+}
+
+function onWishlistChange(distId, tagId){
+  const val = document.getElementById("wishlistBox").checked;
+  setWishlistTag(distId, tagId, val);
 }
 
 /* ---------------------------------------------------------------
